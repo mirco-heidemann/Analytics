@@ -1,2 +1,3 @@
-# Jahresschadentrend
-Trend modelling of yearly losses for both, natural hazards and fire.
+A collection of scripts for various analytical tasks at GVZ, including:
+
+- Trend analyses of yearly losses
