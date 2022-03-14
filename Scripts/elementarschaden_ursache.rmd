@@ -1,0 +1,121 @@
+---
+title: "Schaden Elementar nach Ursache"
+output: pdf_document #html_notebook
+---
+
+```{r setup, message=FALSE, include=FALSE}
+library(tidyverse)
+library(reshape2)
+
+## pfade spezifizieren
+pth_port <- ("../GVZ_Data/2021")
+```
+
+```{r message=FALSE}
+input_csv <- paste0(pth_port, "GemDat_Schaden_Export_Ng.csv")
+
+# df <- read_delim(input_csv, delim = ";", col_names = TRUE,
+#                  locale = locale(encoding = 'ISO-8859-1'),
+#                  col_types = cols_only(
+#                    GebaeudeId = col_integer(),
+#                    GebaeudeSuchbegriff = col_character(),
+#                    SchadenId = col_integer(),
+#                    SchadenNr = col_character(),
+#                    SchadenDatum = col_date("%d.%m.%Y"),
+#                    Ausdr3 = col_integer(),
+#                    SchadenSumme = col_double(),
+#                    GebaeudeGemeindeName = col_character(),
+#                    SchadenArtBezeichnung = col_character(),
+#                    CodTextDt = col_character(),
+#                    GebaeudeZweckText = col_character(),
+#                    Tab_Stc_StcTextDt = col_character(),
+#                    GebaeudeBaujahr = col_integer()))
+
+## To Do: GemDat/Rubin
+df <- read_delim(input_csv, delim = ";", col_names = TRUE,
+                 locale = locale(encoding = 'UFT-8'),
+                 col_types = cols_only(
+                   GebaeudeId = col_integer(),
+                   GebaeudeSuchbegriff = col_character(),
+                   SchadenId = col_integer(),
+                   SchadenNr = col_character(),
+                   SchadenDatum = col_date("%d.%m.%Y"),
+                   Ausdr3 = col_integer(),
+                   SchadenSumme = col_double(),
+                   GebaeudeGemeindeName = col_character(),
+                   SchadenArtBezeichnung = col_character(),
+                   CodTextDt = col_character(),
+                   GebaeudeZweckText = col_character(),
+                   Tab_Stc_StcTextDt = col_character(),
+                   GebaeudeBaujahr = col_integer()))
+```
+
+Doppelten Schaden ID's nur einmal beruecksichtigen! Welche schaden ID sind doppelt vorhanden?
+```{r}
+df_duplicates <- df %>%
+  group_by(SchadenId) %>%
+  filter(n() > 1) %>%
+  ## duplikate nur einmal anzeigen
+  filter(row_number() == 1)
+
+## doppelte schaden ID Zeilen nur einmal
+df <- df %>%
+  ## duplikate nur einmal
+  distinct(SchadenId, .keep_all = TRUE)
+
+## nur...
+## Elementarschäden, schadensumme über 0, ...
+df_element <- df %>% 
+  mutate(CodTextDt = as.character(str_trim(gsub("\\d", "", CodTextDt), "left"))) %>% 
+  filter(str_detect(SchadenArtBezeichnung, "Elementar"),
+         str_detect(CodTextDt, paste(c('Hochwasser', 'Hagel', 'Sturm'), collapse = '|')),
+         SchadenSumme > 0, 
+         Ausdr3 < 2019) %>%
+  mutate(gruppe = ifelse(Ausdr3 < 1990, 1, 2)) %>% 
+  group_by(Ausdr3, CodTextDt) %>% 
+  summarize(freq = n(),
+            schadensum = sum(SchadenSumme))
+```
+
+ggplot
+```{r}
+theme_set(theme_bw(base_size = 12))
+
+bar_es_ursache <- ggplot(df_element, aes(x = as.character(Ausdr3), y = schadensum/1e6,
+                                         fill = CodTextDt)) + 
+  geom_bar(stat = "identity") +
+  scale_fill_manual(name = "",
+                    values = c("#01665e", "#67a9cf", "#d8b365")) +
+  ylab("Schadensumme in Mio.") + xlab("") +
+  labs(title = "Jährliche Schadensumme Elementar pro Ursache",
+       #subtitle = "",
+       caption = "Quelle: GVZ") +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        legend.key.height = unit(0.1,"cm"),
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/28,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Save the ggplot's
+```{r}
+width_plot = 12
+# height_plot = (3/4) * width_plot
+height_plot = (9/16) * width_plot
+
+ggsave(bar_es_ursache, filename = "es_ursache.png", dpi = 1000, type = "cairo",
+       width = width_plot, height = height_plot, units = "in")
+```
+
+
+

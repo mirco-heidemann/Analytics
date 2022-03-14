@@ -1,0 +1,769 @@
+---
+title: "Schadentrend Elementar-und Feuerschäden GVZ"
+output: pdf_document #html_notebook
+subtitle: Trendgrafik - Eine Darstellung der Feuer- und Elementarjahresschäden
+---
+Die Grafik bildet die Entwicklung der jährlichen Feuer- und Elementarschäden der letzten 40 Jahre ab. Indem die jährlichen Schäden ins Verhältnis des jeweiligen Gebäudebestandes gesetzt werden, lässt sich die Schadenentwicklung von Wert- und Preisentwicklungen entkoppeln.
+Die Trendkurven werden mit einem Regressionsmodell nach gängigen, statistischen Methoden berechnet und zeigen die langfristige Entwicklung auf. Einmal jährlich wird das Modell mit den aktuellen Geschäftszahlen ergänzt.
+
+Bemerkung: Die Schadenzahlen entsprechen dem BERICHTSJAHR, nicht dem Schadenjahr (z.B. sind die Sturmschäden durch Lothar im Jahre 2000 sichtbar.
+
+## Statistische Methodik
+Um die Wahl der Trendmodelle zu verstehen, ist der nachfolgende Exkurs zur Datentransformation und Link-Funktionen aufgeführt:
+
+### The Difference Between Link Functions and Data Transformations
+Generalized linear models-and generalized linear mixed models-are called generalized linear because they connect a model's outcome to its predictors in a linear way. The function used to make this connection is called a link function.
+
+For example, Poisson regression (commonly used for outcomes that are counts) makes use of a natural log link function as follows:
+$$log(u_{y}) = beat_{0} + beta_{1}x_{1} + beta_{2}x_{2} + ... $$
+
+Clearly, there is not a direct linear relationship of the x variables to the average count, but there is a "sort of linear" relationship happening: a function of the mean of y is related to a linear combination of x variables. In other words, the linear model has now been generalized to a bigger type of situation.
+
+This can lead to confusion, though, because on the surface it looks very similar to what happens when we transform the dependent variable in a linear model, like a linear regression.
+
+The key thing to understand is that the natural log link function is a function of the mean of y, not the y values themselves.
+
+### Understanding the Log Link Function
+When we perform a statistical model, we are in a sense creating a mathematical equation. The simplest regression model looks like this:
+$$Y_i = beat_{0} + beta_{1}X_{1} + e_i $$
+
+The left side of the equation is the sum of two parts on the right: the fixed component, beta0 + beta1X, and the random component, ei.
+
+You'll also sometimes see the equation written about the mean or expected value of Y on the left and only the fixed component on the right:
+$$u_{Y|X} = beat_{0} + beta_{1}X_{1}$$
+All we've done is remove that random component from both sides to focus on the fixed portion. Why?
+
+The random component has a probability distribution. Since the outcome variable Y includes that random component, it too follows a probability distribution.
+
+In linear regression, we assume that probability distribution is normal.  But there are a lot of outcome variables for which a normal distribution doesn't fit.
+
+Generalized linear models allow a few other distributions, including Poisson, binomial, and Gamma (among others).
+
+But in order to make the model fit in a linear form for these other distributions, we often need to take some function of the mean. That second equation above doesn't fit.
+
+In generalized linear models, there is a link function, which is the link between the mean of Y on the left and the fixed component on the right.
+$$f(u_{Y|X}) = beat_{0} + beta_{1}X_{1}$$
+In GLM, there is a link function, which is the link between the mean of Y on the left and the fixed component on the right. The log link exponentiates the linear predictors. _It does not log transform the outcome variable_. The natural log link function for exemple is a function of the mean of y, not the y values themselves.
+
+Here are two versions of the same basic model equation for count data:
+$$log(u) = beat_{0} + beta_{1}X_{1}$$
+$$U = e^{beat_{0} + beta_{1}X_{1}}$$
+Where u = predicted value of Y given X, exp(beta0) = the effect on the mean of u when X=0, and exp(beta1)= the multiplicative effect on the mean of Y for a one-unit increase in X. e is a constant value of approximately 2.72.
+
+There are several link choices for each probability distribution.
+
+### Transformations of Y
+
+Below is a linear model equation where the original dependent variable, y, has been natural log transformed. That is, the natural log has been taken of each individual value of y, and that is being used as the dependent variable.
+$$log(y_{i}) = beat_{0} + beta_{1}x_{1} + beta_{2}x_{2} + ... + e_{i}$$
+The linear model with the log transformation is providing an equation for an individual value of ln(y). We could also write it as follows, where we are modeling the mean of log(y) (note the error term is no longer present):
+$$u_{log(y)} = beat_{0} + beta_{1}x_{1} + beta_{2}x_{2} + ... $$
+This makes the difference a bit clearer. When we transform the _data_ in a linear model, we are no longer claiming that y is normally distributed around a mean, given the x values - we are claiming that our new outcome variable, log(yi), is normally distributed.
+
+In fact, we often make this transformation specifically because the values of y do not appear to be normally distributed around their average.
+
+In the case of the Poisson model, however, the link function does not change the distribution of the actual observations in some way to make them something other than Poisson distributed. Instead, the link function defines the relationship of the x variables directly to the mean of the Poisson distributed y. _The individual observations then vary around this expected value accordingly_.
+
+### The mean of the log is not the log of the mean
+
+As you may know, if you have used this kind of data transformation in a linear model before, you cannot simply take the exponent of the mean of log(y) to get the mean of y.
+
+You might be surprised to know, though, that you can do this with a link function. If you have specific values of your x variables, you can calculate the predicted average count, uy based on those x values by inversing the natural log:
+$$u_{y} = e^{beat_{0} + beta_{1}x_{1} + beta_{2}x_{2} + ...} $$
+
+This ability to back-transform means (and regression coefficients) to a more intuitive scale is part of what makes generalized linear models so useful.
+
+### Verwendete Modelle für die jährlichen Schadentrends
+
+Der _Feuerschadentrend_ wird anhand der jährlichen Feuerschadensätze (lr), d.h. jährliche Feuerschäden in Millionen /Gebäudebestand in Milliarden - mit einer linearen Regression in abhängigkeit des Jahres gerechnet. Die Feurschadensätze werden dabei erst log-transformiert, um sie "normaler" zu machen. Dazu werden die jährlichen Feuerschadensätze erst auf eine logarithmische Skala transformiert, worauf dann eine lineare Regression nach der Methode der "Kleinste Quadrate" (Ordinary Least Squares, OLS) gerechnet wird.
+$$log(lr_{Feuer}) = beat_0 + beta_1*Jahr + e_i$$
+
+Die Berechnung des _Elementarschadentrends_ basiert auf einer Gamma Regression. Dazu werden die jährlichen Elementarschadensätze mit einem "Generalisiertem Linearen Modelle" (GLM) berechnet. Die Zufallskomponente, auch Fehlerverteiung genannt, folgt dabei einer Gammaverteilung, die Link Funktion ist der log-link. Die Gammaverteilung eignet sich gut bei rechtsschiefen Verteilungen mit Werten über Null. Somit lässt die Modellierung auch extreme Schadenjahre zu.
+Link-Funktion:
+$$log(E[lr_{Elementar}]) = beta_0 + beta_1 * jahr$$
+Wobei E[] für den Erwartungswert (oft auch Mittelwert u) steht, und beta die zu schätzenden Koeffizienten steht.
+Auch wenn die Link Funktion "log-link"" heisst, werden bei der Modellierung mit einer Gamma-Fehlerverteilung die linearen Prediktoren exponiert und nicht logarithmiert um sicherzustellen, dass keine negativen Mittel-, respektive Erwartungswerte resultieren.
+
+
+```{r setup, message=FALSE, include=FALSE}
+## relative pfade spezifizieren
+pth_data <- ("./data/")
+
+library(tidyverse)
+library(reshape2)
+```
+
+### Data Import and Wrangling
+```{r}
+input_csv <- paste0(pth_data, 'gvz_jahreschadenstatistik_2020.csv')
+
+df <- read_delim(input_csv, delim = ";", col_names = TRUE,
+                 locale = locale(encoding = 'ISO-8859-1'),
+                 col_types = cols_only(
+                   Jahr = col_integer(),
+                   versSum = col_double(),
+                   feuerschad = col_double(),
+                   elementarschad = col_double()
+                 )) %>%
+  mutate(jahr = Jahr,
+         vs = versSum,
+         vs_trans = vs/5, # secondary axis
+         f_schad = feuerschad,
+         e_schad = elementarschad) %>%
+  dplyr::select(jahr:e_schad)
+```
+
+### Methodik
+- loess smoother für die Darstellung mit einem Gleitenden Mittel
+- Exponentiellen Regression für den Feuerschadentrend
+- GLM mit einer Gamma-Fehlerverteilung, log-Link (Vorteil: Regression auf der Originalskala, ohne erst zu Transformieren)
+```{r}
+df <- df %>% 
+  mutate(loess_fs = predict(loess(f_schad ~ jahr, data = df, span = 0.4)),
+         loess_es = predict(loess(e_schad ~ jahr, data = df, span = 0.4)),
+         # verhindere negative mittelwerte
+         loess_es = ifelse(loess_es < 0, 0, loess_es),
+         pm_fs = f_schad / vs, # in promille der VersSumme
+         pm_es = e_schad /vs, # in promille der VersSumme
+         loess_pm_fs = predict(loess(pm_fs ~ jahr, data = df, span = 0.3)), # 30% smoothing span
+         loess_pm_es = predict(loess(pm_es ~ jahr, data = df, span = 0.3)),
+         # verhindere negative mittelwerte
+         loess_pm_es = ifelse(loess_pm_es < 0, 0, loess_pm_es),
+         # Lineare Regression nach OLS auf die log-transformierten Feuerschadensätze
+         lgnorm_pm_fs = exp(fitted(lm(log(pm_fs)~ jahr))),
+         # Gamma Regression mit GLM und log-link Funktion
+         gamma_pm_es = predict(glm(pm_es ~ jahr,
+                                   family = Gamma(link = "log")),
+                               newdata = list(jahr = seq(min(jahr),
+                                                         max(jahr), 1)),
+                               type = "response"))
+```
+
+### Grafiken
+```{r message=FALSE}
+## Melt df for ggplot
+df_melt <- melt(df, id.vars = "jahr")
+
+## set plot theme, theme_bw() will get rid of the background
+## further themes e.g. theme_minimal(), theme_classic() or with library(ggthemes)
+theme_set(theme_bw(base_size = 12)) #, base_family = "Helvetica") +
+```
+
+Bar Plot Entwicklung der Versicherungssummenentwicklung.
+```{r}
+bar_vs <- ggplot() +
+  geom_bar(data = filter(df_melt, variable %in% c("vs")),
+           aes(x = jahr, y = value, fill = variable) , stat = "identity",
+           position = "dodge",  width = 0.6)+
+  theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
+  scale_fill_manual(guide=FALSE, 
+                    values = c("#bcbddc")) +
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+    # scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  ylab("Versicherungskapital [Mrd. CHF]") +
+  labs(title = "Entwicklung des Versicherungskapitals der GVZ", 
+       subtitle = "", 
+       caption = "Quelle: GVZ") + 
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/16,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Bar Plot der Feuer- und Elementarschäden sowie der Versicherungssumme.
+```{r}
+bar_schad_vs <- ggplot() +
+  geom_bar(data = filter(df_melt, variable %in% c("vs_trans", "f_schad", "e_schad")),
+           aes(x = jahr, y = value, fill = variable) , stat = "identity", position = "dodge")+
+  # geom_point(data = filter(df_melt, variable %in% c("variable1", "variable2")),
+  #            aes(x = jahr, y = value,colour = variable)) +
+  # geom_line(data = filter(df_melt, variable %in% c("loess_fs", "loess_es")),
+  #           aes(x = jahr, y = value, colour = variable, group = variable), size = 0.8) +
+  theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
+  scale_fill_manual(name = "", 
+                    labels = c("Versicherungskapital",
+                               "Jahresschäden Feuer",
+                               "Jahresschäden Elementar"), 
+                    values = c("#dadaeb", "#fcae91", "#9ecae1"), 
+                    guide = guide_legend(order = 1)) + # set first legend first)) +
+  # # legend for loess smoother
+  # scale_colour_manual(name = "", 
+  #                     labels = c("Gleitendes Mittel Feuerschäden",
+  #                                "Gleitendes Mittel Elementarschäden"),
+  #                     values = c("#de2d26", "#2171b5")) +
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 100),
+                     sec.axis = sec_axis(~ . *5 , name = "Versicherungskapital [Mrd. CHF]")) +
+  ylab("Jahresschäden [Mio.CHF]") +
+  labs(title = "Versicherungskapital und Jahresschäden der GVZ", 
+       subtitle = "", 
+       caption = "Quelle: GVZ") + 
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/16,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Bar Plot der Feuerschäden, ohne Trend.
+```{r}
+bar_Fschad <- ggplot() +
+  geom_bar(data = filter(df_melt, variable %in% "f_schad"),
+           aes(x = jahr, y = value, fill = variable) , stat = "identity", position = "dodge") +
+  theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
+  scale_fill_manual(name = "", 
+                    labels = c("Jahresschäden Feuer"), 
+                    values = c("#fcae91")) +
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+      # scale_y_continuous(expand = c(0, 0), limits = c(0, 60)) +
+  ylab("Jahresschäden [Mio.CHF]") +
+  labs(title = "Entwicklung Jahresschäden Feuer der GVZ", 
+       subtitle = "", 
+       caption = "Quelle: GVZ") + 
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/16,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Bar Plot der Elementarschäden, ohne Trend.
+```{r}
+bar_Eschad <- ggplot() +
+  geom_bar(data = filter(df_melt, variable %in% c("e_schad")),
+           aes(x = jahr, y = value, fill = variable) , stat = "identity", position = "dodge")+
+  theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
+  scale_fill_manual(name = "", 
+                    labels = c("Jahresschäden Elementar"), 
+                    values = c("#9ecae1")) +
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+    # scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  ylab("Jahresschäden [Mio.CHF]") +
+  labs(title = "Entwicklung Jahresschäden Elementar der GVZ", 
+       subtitle = "", 
+       caption = "Quelle: GVZ") + 
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/16,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Bar Plot der Feuer- und Elementarschäden in Relation der Versicherungssume. OHNE Trendkurve.
+```{r}
+bar_pm <- ggplot() +
+  geom_bar(data = filter(df_melt, variable %in% c("pm_fs", "pm_es")),
+           aes(x = jahr, y = value, fill = variable) , stat = "identity", position = "dodge") +
+  theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
+  scale_fill_manual(name = "",
+                    labels = c("Jahresschäden Feuer",
+                               "Jahresschäden Elementar"),
+                    values = c("#fcae91", "#9ecae1")) +
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  ylab("Schaden in Promille des Versicherungskapitals") +
+  labs(title = "Entwicklung Feuer- und Elementärschaden in Relation zum Versicherungskapital",
+       caption = "Quelle: GVZ") +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/28, # aspect.ratio = 3/4,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Bar Plot der Feuerschädein Relation der Versicherungssume. OHNE Trendkurve.
+```{r}
+bar_pmF <- ggplot() +
+  geom_bar(data = filter(df_melt, variable %in% c("pm_fs")),
+           aes(x = jahr, y = value, fill = variable) , stat = "identity", position = "dodge") +
+  theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
+  scale_fill_manual(name = "",
+                    labels = c("Jahresschäden Feuer"),
+                    values = c("#fcae91")) +
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  ylab("Schaden in Promille des Versicherungskapitals") +
+  labs(title = "Entwicklung Feuerschaden in Relation zum Versicherungskapital",
+       caption = "Quelle: GVZ") +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/28, # aspect.ratio = 3/4,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Bar Plot der Elementarschäden in Relation der Versicherungssume. OHNE Trendkurve.
+```{r}
+bar_pmE <- ggplot() +
+  geom_bar(data = filter(df_melt, variable %in% c("pm_es")),
+           aes(x = jahr, y = value, fill = variable) , stat = "identity", position = "dodge") +
+  theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
+  scale_fill_manual(name = "",
+                    labels = c("Jahresschäden Elementar"),
+                    values = c("#9ecae1")) +
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  ylab("Schaden in Promille des Versicherungskapitals") +
+  labs(title = "Entwicklung Elementärschaden in Relation zum Versicherungskapital",
+       caption = "Quelle: GVZ") +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/28, # aspect.ratio = 3/4,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Bar Plot der Feuer- und Elementarschäden in Relation der Versicherungssume. MIT Trendkurve.
+```{r}
+bar_pm_tr <- ggplot() +
+  geom_bar(data = filter(df_melt, variable %in% c("pm_fs", "pm_es")),
+           aes(x = jahr, y = value, fill = variable) , stat = "identity", position = "dodge") +
+  geom_line(data = filter(df_melt, variable %in% c("lgnorm_pm_fs", "gamma_pm_es")),
+            aes(x = jahr, y = value, colour = variable, group = variable), size = 1) +
+  theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
+  scale_fill_manual(name = "",
+                    labels = c("Jahresschäden Feuer",
+                               "Jahresschäden Elementar"),
+                    values = c("#fcae91", "#9ecae1"),
+                    guide = guide_legend(order = 1)) + # set first legend first) +
+  # legend for trend
+  scale_colour_manual(name = "",
+                      labels = c("Trendkurve Feuerschäden",
+                                 "Trendkurve Elementarschäden"),
+                      values = c("#de2d26", "#2171b5")) +
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  ylab("Schaden in Promille des Versicherungskapitals") +
+  labs(title = "Entwicklung Feuer- und Elementärschaden in Relation zum Versicherungskapital",
+       subtitle = "Die Trendkurven sind mit statistischen Regressionsmodellen über die gesamte Zeitspanne berechnet",
+       caption = "Quelle: GVZ") +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/30, # aspect.ratio = 3/4,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Bar Plot der Feuerschäden in Relation der Versicherungssume. MIT Trendkurve.
+```{r}
+bar_pmF_tr <- ggplot() +
+  geom_bar(data = filter(df_melt, variable %in% c("pm_fs")),
+           aes(x = jahr, y = value, fill = variable) , stat = "identity", position = "dodge") +
+  geom_line(data = filter(df_melt, variable %in% c("lgnorm_pm_fs")),
+            aes(x = jahr, y = value, colour = variable, group = variable), size = 1) +
+  theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
+  scale_fill_manual(name = "",
+                    labels = c("Jahresschäden Feuer"),
+                    values = c("#fcae91"),
+                    guide = guide_legend(order = 1)) + # set first legend first) +
+  # legend for trend
+  scale_colour_manual(name = "",
+                      labels = c("Trendkurve Feuerschäden"),
+                      values = c("#de2d26")) +
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  ylab("Schaden in Promille des Versicherungskapitals") +
+  labs(title = "Entwicklung Feuerschaden in Relation zum Versicherungskapital",
+       subtitle = "Die Trendkurve ist mit statistischen Regressionsmodellen über die gesamte Zeitspanne berechnet",
+       caption = "Quelle: GVZ") +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/30, # aspect.ratio = 3/4,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Bar Plot der Elementarschäden in Relation der Versicherungssume. MIT Trendkurve.
+```{r}
+bar_pmE_tr <- ggplot() +
+  geom_bar(data = filter(df_melt, variable %in% c("pm_es")),
+           aes(x = jahr, y = value, fill = variable) , stat = "identity", position = "dodge") +
+  geom_line(data = filter(df_melt, variable %in% c("gamma_pm_es")),
+            aes(x = jahr, y = value, colour = variable, group = variable), size = 1) +
+  theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
+  scale_fill_manual(name = "",
+                    labels = c("Jahresschäden Elementar"),
+                    values = c("#9ecae1"),
+                    guide = guide_legend(order = 1)) + # set first legend first) +
+  # legend for trend
+  scale_colour_manual(name = "",
+                      labels = c("Trendkurve Elementarschäden"),
+                      values = c("#2171b5")) +
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  ylab("Schaden in Promille des Versicherungskapitals") +
+  labs(title = "Entwicklung Elementärschaden in Relation zum Versicherungskapital",
+       subtitle = "Die Trendkurven sind mit statistischen Regressionsmodellen über die gesamte Zeitspanne berechnet",
+       caption = "Quelle: GVZ") +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/30, # aspect.ratio = 3/4,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Bar Plot der Feuer- und Elementarschäden in Relation der Versicherungssume. MIT LOESS Smoother.
+```{r}
+bar_pm_lo <- ggplot() +
+  geom_bar(data = filter(df_melt, variable %in% c("pm_fs", "pm_es")),
+           aes(x = jahr, y = value, fill = variable) , stat = "identity", position = "dodge") +
+  geom_line(data = filter(df_melt, variable %in% c("loess_pm_fs", "loess_pm_es")),
+            aes(x = jahr, y = value, colour = variable, group = variable), size = 1) +
+  theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
+  scale_fill_manual(name = "",
+                    labels = c("Jahresschäden Feuer",
+                               "Jahresschäden Elementar"),
+                    values = c("#fcae91", "#9ecae1"),
+                    guide = guide_legend(order = 1)) + # set first legend first) +
+  # legend for trend
+  scale_colour_manual(name = "",
+                      labels = c("Gleitendes Mittel Feuerschäden",
+                                 "Gleitendes Mittel Elementarschäden"),
+                      values = c("#de2d26", "#2171b5")) +
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  ylab("Schaden in Promille des Versicherungskapitals") +
+  labs(title = "Entwicklung Feuer- und Elementärschaden in Relation zum Versicherungskapital",
+       # subtitle = "Die gleitenden Mittelwerte sind mit lokal gewichteten Regressionsfunktion berechnet",
+       subtitle = "Die gleitenden Mittelwerte berücksichtigen die benachbarten Jahreschäden stärker als die weiter entfernten",
+       caption = "Quelle: GVZ") +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/30, # aspect.ratio = 3/4,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Diverging barplots: Standardisierung der jahresschaeden: Transformation der Jahresschaeden auf den Erwartungswert Null und die Varianz Eins. Dadurch lassen sich die Jahresschäden in Bezug auf ihre Lage charakterisieren.
+```{r}
+## Data Preparation
+df <- df %>% mutate(f_schad_Z = round((f_schad - mean(f_schad))/sd(f_schad), 2),
+                    e_schad_Z = round((e_schad - mean(e_schad))/sd(e_schad), 2),
+                    pm_fs_Z = round((pm_fs - mean(pm_fs))/sd(pm_fs), 2),
+                    pm_es_Z = round((pm_es - mean(pm_es))/sd(pm_es), 2),
+                    ## above / below avg flag
+                    f_schadType = ifelse(f_schad_Z < 0, "below", "above"),
+                    e_schadType = ifelse(e_schad_Z < 0, "below", "above"),
+                    pm_fsType = ifelse(pm_fs_Z < 0, "below", "above"),
+                    pm_esType = ifelse(pm_es_Z < 0, "below", "above"),
+                    ## LOESS Smoother der standardisierten Jahresschaeden
+                    loess_pm_fs_Z = predict(loess(pm_fs_Z ~ jahr, data = df, span = 0.20)),
+                    loess_pm_es_Z = predict(loess(pm_es_Z ~ jahr, data = df, span = 0.20)))
+
+## Set base theme
+theme_set(theme_bw(base_size = 12))
+```
+
+Diverging barplots - Jahresschaeden Feuer in Promille des Versicherungskapitals.
+```{r}
+bar_Fschad_div <- ggplot(df, aes(x = jahr, y = pm_fs_Z, label = pm_fs_Z)) + 
+  geom_bar(stat = 'identity', aes(fill = pm_fsType), width = .5)  +
+  geom_smooth(aes(x = jahr, y = pm_fs_Z, color = 'Gleitendes Mittel'), method = "loess",
+              se = FALSE, span =0.75) +
+  
+  # geom_smooth(method = "lm", se = FALSE, colour = "#67000d") +
+  # geom_smooth(colour = "red", se = F,
+  #             method = "glm",
+  #             formula = y~ns(x,4), # library(splines)
+  #             family = gaussian(link = "log"),
+  #             lwd = 0.7) +
+  
+  scale_fill_manual(name = "", 
+                    labels = c("Über dem langjährigen Schaden Mittel",
+                               "Unter dem langjährigen Schaden Mittel"), 
+                    values = c("above" = "#de2d26", "below" = "#fcae91"),
+                    guide = guide_legend(order = 1))+
+  # legend for geom_smooth
+  scale_colour_manual(name = "", values = c('Gleitendes Mittel' = "#a50f15")) + 
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(floor(min(df$pm_fs_Z)),
+                                                  ceiling(max(df$pm_fs_Z)))) +
+  ylab("") +
+  labs(title = "Abweichung vom Jahresschadenmittel Feuer GVZ",
+       subtitle = "Standardisierte Schäden im Verhältnis zum Versicherungskapital",
+       caption = "Quelle: GVZ") +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/16,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Diverging barplots - Jahresschaeden Elementar in Promille des Versicherungskapitals.
+```{r}
+## Jahresschaeden Elementar in Promille des Versicherungskapitals
+bar_Eschad_div <- ggplot(df, aes(x = jahr, y = pm_es_Z, label = pm_es_Z)) + 
+  geom_bar(stat = 'identity', aes(fill = pm_esType), width = .5)  +
+  geom_smooth(aes(x = jahr, y = pm_es_Z, color = 'Gleitendes Mittel'), method = "loess",
+              se = FALSE, span= 0.75) +
+  
+  # geom_smooth(method = "lm", se = FALSE, colour = "#08306b") +
+  # geom_smooth(colour = "blue", se = F,
+  #             method = "glm",
+  #             formula = y~ns(x,2),
+  #             family = gaussian(link = "log"),
+  #             show.legend = FALSE,lwd = 0.7) +
+  
+  scale_fill_manual(name = "", 
+                    labels = c("Über dem langjährigen Schaden Mittel",
+                               "Unter dem langjährigen Schaden Mittel"), 
+                    values = c("above" = "#2171b5", "below" = "#9ecae1"),
+                    guide = guide_legend(order = 1)) + # set first legend first
+  # legend for geom_smooth
+  scale_colour_manual(name = "", values = c('Gleitendes Mittel' = "#08519c")) + 
+  scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
+                     breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(floor(min(df$pm_es_Z)),
+                                                  ceiling(max(df$pm_es_Z)))) +
+  ylab("") +
+  labs(title ="Abweichung vom Jahresschadenmittel Elementar GVZ",
+       subtitle = "Standardisierte Schäden im Verhältnis zum Versicherungskapital",
+       caption = "Quelle: GVZ") +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 65, vjust = 0.6),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(colour = "gray"),
+        panel.grid.major.y = element_line(colour = "gray"),
+        ## Hide all the vertical gridlines
+        panel.grid.minor.x = element_blank(), panel.grid.major.x = element_blank(),
+        legend.position = "bottom", # "none" for no legend
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = 9/16,
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Sortierte Jahresschaeden Feuer in Promille des Versicherungskapitals
+```{r}
+## Data Preparation
+df_fs <- df %>% arrange(desc(pm_fs_Z)) %>% 
+  ## convert to factor to retain sorted order in plot
+  mutate(jahr = factor(jahr, levels = jahr))
+
+bar_Fschad_sort <- ggplot(df_fs, aes(x = jahr, y = pm_fs_Z, label = pm_fs_Z)) + 
+  geom_bar(stat = 'identity', aes(fill = pm_fsType), width = .5)  +
+  scale_fill_manual(name = "Jahresschaden", 
+                    labels = c("Über Mittel",
+                               "Unter Mittel"), 
+                    values = c("above" = "#de2d26", "below" = "#fcae91")) + 
+  ylab("") + xlab("") +
+  labs(title = "Sortierte Abweichung vom Jahresschadenmittel Feuer GVZ",
+       subtitle = "Standardisierte Schäden im Verhältnis zum Versicherungskapital",
+       caption = "Quelle: GVZ") +
+  coord_flip() +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.y = element_text(size = 8),
+        axis.text.x=element_blank(),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        #panel.border = element_rect(colour = "gray"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.major.y = element_line(colour = "#d9d9d9", size = 0.1),
+        panel.border = element_blank(),
+        legend.position = c(0.9, 0.2),
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = sqrt(2)/1, # a4
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Sortierte Jahresschaeden Elementar in Promille des Versicherungskapitals
+```{r}
+## Data Preparation
+df_es <- df %>% arrange(desc(pm_es_Z)) %>% 
+  ## convert to factor to retain sorted order in plot
+  mutate(jahr = factor(jahr, levels = jahr))
+
+bar_Eschad_sort <- ggplot(df_es, aes(x = jahr, y = pm_es_Z, label = pm_es_Z)) + 
+  geom_bar(stat = 'identity', aes(fill = pm_esType), width = .5)  +
+  scale_fill_manual(name = "Jahresschaden", 
+                    labels = c("Über Mittel",
+                               "Unter Mittel"), 
+                    values = c("above" = "#2171b5", "below" = "#9ecae1")) + 
+  ylab("") + xlab("") +
+  labs(title = "Sortierte Abweichung vom Jahresschadenmittel Elementar GVZ",
+       subtitle = "Standardisierte Schäden im Verhältnis zum Versicherungskapital",
+       caption = "Quelle: GVZ") +
+  coord_flip() +
+  theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
+        axis.title.x = element_blank(),
+        axis.text.y = element_text(size = 8),
+        axis.text.x=element_blank(),
+        axis.title.y = element_text(size = 12, vjust = 1.1),
+        axis.ticks = element_blank(),
+        #panel.border = element_rect(colour = "gray"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.major.y = element_line(colour = "#d9d9d9", size = 0.1),
+        panel.border = element_blank(),
+        legend.position = c(0.9, 0.2),
+        # Removing/Reducing the whitespace surrounding the plot
+        # (requires the grid library)
+        aspect.ratio = sqrt(2)/1, # a4
+        plot.margin = unit(c(1,1,1,1),"mm")) # ("left", "right", "bottom", "top")
+```
+
+Save the ggplot's
+```{r}
+width_plot = 12
+# height_plot = (3/4) * width_plot
+height_plot = (9/16) * width_plot
+```
+Save the plot as a PDF with ggsave and Cairo. R will want to autocomplete cairo_pdf to cairo_pdf() (note the parentheses). This will not work with the parentheses; ensure there aren't any
+```{r}
+ggsave(bar_pm_tr, filename = "pm_tr.pdf", device = cairo_pdf,
+       width = width_plot, height = height_plot, units = "in")
+```
+
+Save the plot as a high resolution PNG using Cairo. Note the difference here; instead of using device = cairo_pdf, you use. type = "cairo". It's confusing and weird and that's just life.
+```{r}
+ggsave(bar_pm_tr, filename = "pm_tr.png", dpi = 1000, type = "cairo",
+       width = width_plot, height = height_plot, units = "in")
+```
+
+### Datensatz mit Trenddaten aufbereiten und in ein CSV File schreiben
+Lineare Regression nach OLS Methode für die Feuerschäden, eine Gamma Regression mit der Log-Link Function für die Elementarschäden.
+```{r}
+df_out <- df %>% 
+  dplyr::select("jahr", "pm_fs", "pm_es", "lgnorm_pm_fs", "gamma_pm_es") %>% 
+  rename(Jahr = jahr,
+         Feuerschaden_in_Promille_der_Versicherungssumme = pm_fs,
+         Elementarschaden_in_Promille_der_Versicherungssumme = pm_es,
+         Trendkurve_Feuerschaden = lgnorm_pm_fs,
+         Trendkurve_Elementarschaden = gamma_pm_es)
+
+## Daten als csv file ausgeben
+# write_excel_csv(df_out, 'geschäftsbericht_schadentrend_2020.csv', delim = ";")
+```
+
+### Interpretation der Grafiken:
+Handelt es sich bei Brandfällen in der Regel um unabhängige Einzelereignisse welche die Statistik bestimmen, können bei einem Elementarschadenereignis tausende von Gebäuden gleichzeitig betroffen sein. Solche Ereignisse zeigen sich in der Elementarschadenstatistik als markante Spitzen. Verantwortlich hierfür sind oft grossflächig wirksame Naturereignisse wie Überschwemmungen, ausgedehnte Hagelgewitter oder Winterstürme.
+
+_These:_ Die Wirksamkeit des Brandschutzes und der Schadenprävention zeigt sich im abnehmenden Trend der Feuerschadenentwicklung. Dank verbindlichen Normen und Nachschlagewerken zu Baumaterialien und Konstruktion ist es gelungen, die Anzahl und Höhe der Feuerschäden stetig zu verringern.
+
+Die Zunahme der Elementarschäden lässt sich durch verschiedene Faktoren erklären: So kann ein Trend zu häufigeren, schadenverursachender Wetterlagen beobachtet werden und es gibt tendenziell mehr Ereignisse mit grosser Intensität. Diese klimatischen und meteorologischen Veränderungen der letzten Jahrzehnte können aber, wenn überhaupt, nur einen Teil des steigenden Schadentrends erklären. Viel bestimmender für den Schadenanstieg ist die zunehmende Verletzlichkeit der Gebäude. Mit geeigneten Präventionsmassnahmen und Objektschutz wirkt die GVZ Gebäudeversicherung Kanton Zürich dieser Schadenentwicklung entgegen.
