@@ -84,18 +84,18 @@ $$log(E[lr_{Elementar}]) = beta_0 + beta_1 * jahr$$
 Wobei E[] für den Erwartungswert (oft auch Mittelwert u) steht, und beta die zu schätzenden Koeffizienten steht.
 Auch wenn die Link Funktion "log-link"" heisst, werden bei der Modellierung mit einer Gamma-Fehlerverteilung die linearen Prediktoren exponiert und nicht logarithmiert um sicherzustellen, dass keine negativen Mittel-, respektive Erwartungswerte resultieren.
 
-
+### Start Coding...
+RMarkdown files are a special case, as they work slightly differently to .R files in terms of file paths, i.e. they behave like mini projects of their own, where the default working directory is where the Rmd file is saved. To save RMarkdown files in a basic folder structure set up, it’s recommended to use the [here package](https://github.com/jennybc/here_here) and its workflow.
 ```{r setup, message=FALSE, include=FALSE}
-## relative pfade spezifizieren
-pth_data <- ("./data/")
-
 library(tidyverse)
 library(reshape2)
+library(here)
 ```
 
 ### Data Import and Wrangling
 ```{r}
-input_csv <- paste0(pth_data, 'gvz_jahreschadenstatistik_2020.csv')
+# Path workflow for RMarkdown files with here packages
+input_csv <- here("Data", "gvz_jahreschadenstatistik_2021.csv")
 
 df <- read_delim(input_csv, delim = ";", col_names = TRUE,
                  locale = locale(encoding = 'ISO-8859-1'),
@@ -156,7 +156,7 @@ bar_vs <- ggplot() +
            aes(x = jahr, y = value, fill = variable) , stat = "identity",
            position = "dodge",  width = 0.6)+
   theme(axis.text.x = element_text(angle = 45),legend.position = "bottom") +
-  scale_fill_manual(guide=FALSE, 
+  scale_fill_manual(guide="none", 
                     values = c("#bcbddc")) +
   scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
                      breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
@@ -204,7 +204,7 @@ bar_schad_vs <- ggplot() +
   #                     values = c("#de2d26", "#2171b5")) +
   scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
                      breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 100),
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 150),
                      sec.axis = sec_axis(~ . *5 , name = "Versicherungskapital [Mrd. CHF]")) +
   ylab("Jahresschäden [Mio.CHF]") +
   labs(title = "Versicherungskapital und Jahresschäden der GVZ", 
@@ -269,7 +269,8 @@ bar_Eschad <- ggplot() +
                     values = c("#9ecae1")) +
   scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
                      breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
-    # scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 150),
+                     breaks = c(0, 50, 100, 150)) +
   ylab("Jahresschäden [Mio.CHF]") +
   labs(title = "Entwicklung Jahresschäden Elementar der GVZ", 
        subtitle = "", 
@@ -302,7 +303,8 @@ bar_pm <- ggplot() +
                     values = c("#fcae91", "#9ecae1")) +
   scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
                      breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.3),
+                     breaks = c(0, 0.1, 0.2, 0.3)) +
   ylab("Schaden in Promille des Versicherungskapitals") +
   labs(title = "Entwicklung Feuer- und Elementärschaden in Relation zum Versicherungskapital",
        caption = "Quelle: GVZ") +
@@ -333,7 +335,8 @@ bar_pmF <- ggplot() +
                     values = c("#fcae91")) +
   scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
                      breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.3),
+                     breaks = c(0, 0.1, 0.2, 0.3)) +
   ylab("Schaden in Promille des Versicherungskapitals") +
   labs(title = "Entwicklung Feuerschaden in Relation zum Versicherungskapital",
        caption = "Quelle: GVZ") +
@@ -364,7 +367,8 @@ bar_pmE <- ggplot() +
                     values = c("#9ecae1")) +
   scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
                      breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.3),
+                     breaks = c(0, 0.1, 0.2, 0.3)) +
   ylab("Schaden in Promille des Versicherungskapitals") +
   labs(title = "Entwicklung Elementärschaden in Relation zum Versicherungskapital",
        caption = "Quelle: GVZ") +
@@ -404,10 +408,11 @@ bar_pm_tr <- ggplot() +
                       values = c("#de2d26", "#2171b5")) +
   scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
                      breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.3),
+                     breaks = c(0, 0.1, 0.2, 0.3)) +
   ylab("Schaden in Promille des Versicherungskapitals") +
   labs(title = "Entwicklung Feuer- und Elementärschaden in Relation zum Versicherungskapital",
-       subtitle = "Die Trendkurven sind mit statistischen Regressionsmodellen über die gesamte Zeitspanne berechnet",
+       subtitle = "Die Trendkurven sind mit statistischen Regressionsmodellen berechnet",
        caption = "Quelle: GVZ") +
   theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
         axis.title.x = element_blank(),
@@ -446,7 +451,7 @@ bar_pmF_tr <- ggplot() +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
   ylab("Schaden in Promille des Versicherungskapitals") +
   labs(title = "Entwicklung Feuerschaden in Relation zum Versicherungskapital",
-       subtitle = "Die Trendkurve ist mit statistischen Regressionsmodellen über die gesamte Zeitspanne berechnet",
+       subtitle = "Die Trendkurven sind mit statistischen Regressionsmodellen berechnet",
        caption = "Quelle: GVZ") +
   theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
         axis.title.x = element_blank(),
@@ -482,10 +487,10 @@ bar_pmE_tr <- ggplot() +
                       values = c("#2171b5")) +
   scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
                      breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.35)) +
   ylab("Schaden in Promille des Versicherungskapitals") +
   labs(title = "Entwicklung Elementärschaden in Relation zum Versicherungskapital",
-       subtitle = "Die Trendkurven sind mit statistischen Regressionsmodellen über die gesamte Zeitspanne berechnet",
+       subtitle = "Die Trendkurven sind mit statistischen Regressionsmodellen berechnet",
        caption = "Quelle: GVZ") +
   theme(plot.title = element_text(size = 14, colour = "black", vjust = 1, hjust = 0),
         axis.title.x = element_blank(),
@@ -523,7 +528,7 @@ bar_pm_lo <- ggplot() +
                       values = c("#de2d26", "#2171b5")) +
   scale_x_continuous(expand = c(0.005, 0.005), # Reducing the whitespace
                      breaks = seq(from = min(df$jahr), to = max(df$jahr), by = 5)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.25)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.35)) +
   ylab("Schaden in Promille des Versicherungskapitals") +
   labs(title = "Entwicklung Feuer- und Elementärschaden in Relation zum Versicherungskapital",
        # subtitle = "Die gleitenden Mittelwerte sind mit lokal gewichteten Regressionsfunktion berechnet",
@@ -736,19 +741,28 @@ height_plot = (9/16) * width_plot
 ```
 Save the plot as a PDF with ggsave and Cairo. R will want to autocomplete cairo_pdf to cairo_pdf() (note the parentheses). This will not work with the parentheses; ensure there aren't any
 ```{r}
-ggsave(bar_pm_tr, filename = "pm_tr.pdf", device = cairo_pdf,
+# Path workflow for RMarkdown files with here packages
+output_pdf <- here("Output", "pm_tr.pdf")
+
+ggsave(bar_pm_tr, filename = output_pdf, device = cairo_pdf,
        width = width_plot, height = height_plot, units = "in")
 ```
 
 Save the plot as a high resolution PNG using Cairo. Note the difference here; instead of using device = cairo_pdf, you use. type = "cairo". It's confusing and weird and that's just life.
 ```{r}
-ggsave(bar_pm_tr, filename = "pm_tr.png", dpi = 1000, type = "cairo",
+# Path workflow for RMarkdown files with here packages
+output_png <- here("Output", "bar_Fschad_div.png")
+
+ggsave(bar_pm_tr, filename = output_png, dpi = 1000, type = "cairo",
        width = width_plot, height = height_plot, units = "in")
 ```
 
 ### Datensatz mit Trenddaten aufbereiten und in ein CSV File schreiben
 Lineare Regression nach OLS Methode für die Feuerschäden, eine Gamma Regression mit der Log-Link Function für die Elementarschäden.
 ```{r}
+# Path workflow for RMarkdown files with here packages
+output_csv <- here("Output", "geschäftsbericht_schadentrend_2021.csv")
+
 df_out <- df %>% 
   dplyr::select("jahr", "pm_fs", "pm_es", "lgnorm_pm_fs", "gamma_pm_es") %>% 
   rename(Jahr = jahr,
@@ -758,7 +772,7 @@ df_out <- df %>%
          Trendkurve_Elementarschaden = gamma_pm_es)
 
 ## Daten als csv file ausgeben
-# write_excel_csv(df_out, 'geschäftsbericht_schadentrend_2020.csv', delim = ";")
+write_excel_csv(df_out, output_csv, delim = ";")
 ```
 
 ### Interpretation der Grafiken:
